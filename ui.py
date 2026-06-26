@@ -9,8 +9,8 @@ import time as time_module
 
 # 新增了 QEvent 匯入
 from PySide6.QtCore import QEvent, QPointF, Qt, QTimer
-from PySide6.QtGui import (QBrush, QColor, QFont, QPainter, QPainterPath,
-                            QPolygonF)
+from PySide6.QtGui import (QBrush, QColor, QFont, QFontMetrics, QPainter,
+                            QPainterPath, QPolygonF)
 from PySide6.QtWidgets import (QGridLayout, QHBoxLayout, QLabel, QLineEdit,
                                 QMainWindow, QPushButton, QVBoxLayout, QWidget)
 
@@ -88,18 +88,28 @@ class DancerWidget(QWidget):
         f = QFont()
         f.setPointSize(8)
         f.setBold(True)
-        p.setFont(f)
-        p.drawText(0, 4, self.width(), 16, Qt.AlignCenter,
-                   f"Dancer {self.index + 1}")
+        name = f"Dancer {self.index + 1}"
 
-        # signal strength (dBm), top-right, only when reporting
+        # append signal strength (dBm) right after the name when reporting,
+        # one point bigger and pure white so the value stands out
         if self.online and self.rssi is not None:
-            p.setPen(QColor(DIM))
-            fr = QFont()
-            fr.setPointSize(7)
-            p.setFont(fr)
-            p.drawText(0, 4, self.width() - 6, 16,
-                       Qt.AlignRight | Qt.AlignVCenter, f"{self.rssi} dBm")
+            rf = QFont()
+            rf.setPointSize(9)
+            rf.setBold(True)
+            rssi_text = f"  {self.rssi} dBm"
+            name_w = QFontMetrics(f).horizontalAdvance(name)
+            rssi_w = QFontMetrics(rf).horizontalAdvance(rssi_text)
+            x = (self.width() - (name_w + rssi_w)) / 2
+            p.setFont(f)
+            p.drawText(int(x), 4, name_w, 16,
+                       Qt.AlignLeft | Qt.AlignVCenter, name)
+            p.setFont(rf)
+            p.setPen(QColor("#ffffff"))
+            p.drawText(int(x + name_w), 4, rssi_w, 16,
+                       Qt.AlignLeft | Qt.AlignVCenter, rssi_text)
+        else:
+            p.setFont(f)
+            p.drawText(0, 4, self.width(), 16, Qt.AlignCenter, name)
 
         # SVG-like figure (viewBox 10 0 222 360, group translate 0,35)
         vb_x, vb_y, vb_w, vb_h = 10, 0, 222, 360

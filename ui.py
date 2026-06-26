@@ -57,6 +57,7 @@ class DancerWidget(QWidget):
         self.index = index
         self.colors = {n: (0, 0, 0) for n in PART_NAMES}
         self.online = False
+        self.rssi = None
         self.setFixedSize(170, 290)
 
     def set_colors(self, colors):
@@ -66,6 +67,11 @@ class DancerWidget(QWidget):
     def set_online(self, online):
         if online != self.online:
             self.online = online
+            self.update()
+
+    def set_rssi(self, rssi):
+        if rssi != self.rssi:
+            self.rssi = rssi
             self.update()
 
     def paintEvent(self, _event):
@@ -85,6 +91,15 @@ class DancerWidget(QWidget):
         p.setFont(f)
         p.drawText(0, 4, self.width(), 16, Qt.AlignCenter,
                    f"Dancer {self.index + 1}")
+
+        # signal strength (dBm), top-right, only when reporting
+        if self.online and self.rssi is not None:
+            p.setPen(QColor(DIM))
+            fr = QFont()
+            fr.setPointSize(7)
+            p.setFont(fr)
+            p.drawText(0, 4, self.width() - 6, 16,
+                       Qt.AlignRight | Qt.AlignVCenter, f"{self.rssi} dBm")
 
         # SVG-like figure (viewBox 10 0 222 360, group translate 0,35)
         vb_x, vb_y, vb_w, vb_h = 10, 0, 222, 360
@@ -152,11 +167,17 @@ class PropWidget(QWidget):
         super().__init__()
         self.player_num = player_num
         self.online = False
+        self.rssi = None
         self.setFixedSize(110, 32)
 
     def set_online(self, online):
         if online != self.online:
             self.online = online
+            self.update()
+
+    def set_rssi(self, rssi):
+        if rssi != self.rssi:
+            self.rssi = rssi
             self.update()
 
     def paintEvent(self, _event):
@@ -176,7 +197,15 @@ class PropWidget(QWidget):
         p.drawText(28, 0, self.width() - 32, self.height(),
                    Qt.AlignVCenter | Qt.AlignLeft,
                    f"Prop p{self.player_num}")
-                   
+
+        if self.online and self.rssi is not None:
+            p.setPen(QColor(DIM))
+            fr = QFont()
+            fr.setPointSize(7)
+            p.setFont(fr)
+            p.drawText(0, 0, self.width() - 6, self.height(),
+                       Qt.AlignVCenter | Qt.AlignRight, f"{self.rssi}")
+
         p.end()
 
 
@@ -424,6 +453,8 @@ class MonitorWindow(QMainWindow):
         now = time_module.time()
         online_indices = set()
         online_props = set()
+        rssi_by_index = {}
+        rssi_by_prop = {}
         for device in self.controller.devices.values():
             if device.last_response_time and now - device.last_response_time > 2:
                 device.status = "Disconnected"
@@ -431,19 +462,23 @@ class MonitorWindow(QMainWindow):
                 idx = parse_player_index(device.device_id)
                 if idx is not None:
                     online_indices.add(idx)
+                    rssi_by_index[idx] = device.rssi
                     continue
                 pidx = parse_prop_index(device.device_id)
                 if pidx is not None:
                     online_props.add(pidx + 1)
+                    rssi_by_prop[pidx + 1] = device.rssi
 
         if self.dancers and self.players is not None:
             ticks = self.time_provider()
             for i, w in enumerate(self.dancers):
                 w.set_online(i in online_indices)
+                w.set_rssi(rssi_by_index.get(i))
                 w.set_colors(self.players[i].colors_at(ticks))
 
         for pn, w in self.props.items():
             w.set_online(pn in online_props)
+            w.set_rssi(rssi_by_prop.get(pn))
 
     # ---- 事件攔截器 (Event Filter) ----
     def eventFilter(self, obj, event):

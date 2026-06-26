@@ -30,7 +30,7 @@
 // ---- config ----
 // PLAYER_NUM identifies this unit; flash a unique value per costume.
 // All input pins use INPUT_PULLUP, so "low" = switch closed to GND.
-#define PLAYER_NUM     2
+#define PLAYER_NUM     0
 #define SDA_PIN        12
 #define SCL_PIN        13
 #define DEBUG_PIN      18  // low = debug mode (offline test colors)  | high = normal boot
@@ -272,8 +272,10 @@ int readUDP() {
     return cmd;
 }
 
+// Reply format: "deviceId: status: rssi" where rssi is the live link
+// strength in dBm (WiFi.RSSI()). The host splits on ':' to pull the value out.
 void respond(const char* m) {
-    String s = deviceId + ": " + m;
+    String s = deviceId + ": " + m + ": " + String(WiFi.RSSI());
     udp.beginPacket(RESPOND_TO[wifiProfile], UDP_TX_PORT);
     udp.write(s.c_str());
     udp.endPacket();

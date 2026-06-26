@@ -112,6 +112,7 @@ class DeviceState:
         self.last_response_time = None
         self.status = "Disconnected"
         self.task_status = "Waiting"
+        self.rssi = None  # latest link strength in dBm, as reported by device
 
 
 # ============================================================
@@ -226,8 +227,9 @@ class MusicPlayer(QObject):
 # BACKGROUND THREADS
 # ============================================================
 class ResponseListener(QThread):
-    """Listens for UDP responses 'device_id:task_status' from devices."""
-    response_received = Signal(str, str, str)
+    """Listens for UDP responses 'device_id:task_status:rssi' from devices.
+    The rssi field (dBm) is optional for backwards compatibility."""
+    response_received = Signal(str, str, str, str)
 
     def __init__(self, sock, exit_event):
         super().__init__()
@@ -239,11 +241,15 @@ class ResponseListener(QThread):
             try:
                 data, addr = self.sock.recvfrom(1024)
                 msg = data.decode()
-                if ":" in msg:
-                    device_id, task_status = map(str.strip, msg.split(":", 1))
+                parts = [p.strip() for p in msg.split(":", 2)]
+                if len(parts) >= 2:
+                    device_id = parts[0]
+                    task_status = parts[1]
+                    rssi = parts[2] if len(parts) >= 3 else ""
                 else:
-                    device_id, task_status = "Unknown", msg
-                self.response_received.emit(addr[0], device_id, task_status)
+                    device_id, task_status, rssi = "Unknown", msg.strip(), ""
+                self.response_received.emit(addr[0], device_id, task_status,
+                                            rssi)
             except socket.timeout:
                 continue
             except Exception:
@@ -323,13 +329,14 @@ class Controller:
         self.heartbeat_thread = HeartbeatThread(self)
         self.heartbeat_thread.start()
 
-    def _update_device_status(self, ip, device_id, task_status):
+    def _update_device_status(self, ip, device_id, task_status, rssi=""):
         if ip not in self.devices:
             self.devices[ip] = DeviceState(ip, device_id)
         d = self.devices[ip]
         d.last_response_time = time.time()
         d.status = "Connected"
         d.task_status = task_status
+        d.rssi = rssi or None
 
     # ---- broadcasts ----
     def broadcast_message(self, message):

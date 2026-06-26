@@ -90,26 +90,21 @@ class DancerWidget(QWidget):
         f.setBold(True)
         name = f"Dancer {self.index + 1}"
 
-        # append signal strength (dBm) right after the name when reporting,
-        # one point bigger and pure white so the value stands out
+        # name stays centered in the widget
+        p.setFont(f)
+        p.drawText(0, 4, self.width(), 16, Qt.AlignCenter, name)
+
+        # append signal strength (dBm) just past the centered name when
+        # reporting, one point bigger and pure white so the value stands out
         if self.online and self.rssi is not None:
             rf = QFont()
             rf.setPointSize(9)
             rf.setBold(True)
-            rssi_text = f"  {self.rssi} dBm"
-            name_w = QFontMetrics(f).horizontalAdvance(name)
-            rssi_w = QFontMetrics(rf).horizontalAdvance(rssi_text)
-            x = (self.width() - (name_w + rssi_w)) / 2
-            p.setFont(f)
-            p.drawText(int(x), 4, name_w, 16,
-                       Qt.AlignLeft | Qt.AlignVCenter, name)
+            name_right = (self.width() + QFontMetrics(f).horizontalAdvance(name)) / 2
             p.setFont(rf)
             p.setPen(QColor("#ffffff"))
-            p.drawText(int(x + name_w), 4, rssi_w, 16,
-                       Qt.AlignLeft | Qt.AlignVCenter, rssi_text)
-        else:
-            p.setFont(f)
-            p.drawText(0, 4, self.width(), 16, Qt.AlignCenter, name)
+            p.drawText(int(name_right), 4, self.width() - int(name_right), 16,
+                       Qt.AlignLeft | Qt.AlignVCenter, f"  {self.rssi} dBm")
 
         # SVG-like figure (viewBox 10 0 222 360, group translate 0,35)
         vb_x, vb_y, vb_w, vb_h = 10, 0, 222, 360

@@ -16,9 +16,9 @@
 //   high -> profile 0 (SSID "EE219B",     DHCP)
 //   low  -> profile 1 (SSID "Lightdance", static IP 192.168.1.{100+PLAYER_NUM})
 
+#include <FastLED.h>
 #include <Adafruit_SSD1306.h>
 #include <ArduinoJson.h>
-#include <FastLED.h>
 #include <HTTPClient.h>
 #include <LittleFS.h>
 #include <WiFi.h>
